@@ -59,7 +59,7 @@ operation|explanation
 
 ## 其他可调用对象
 
-+ **[lambda and bind](https://lambdaxing.github.io/posts/C++-lambda-and-bind/)**
++ **[lambda and bind](https://lambdaxing.github.io/posts/Cpp-lambda-and-bind/)**
 
 ---
 

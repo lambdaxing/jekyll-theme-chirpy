@@ -6,7 +6,7 @@ categories: [Notes, Cpp]
 tags: [Cpp]
 ---
 
-&emsp;&emsp;只接受单独一个实参的非显式构造函数定义了从实参类型到类类型的隐式类型转换；而非显式的类型转换运算符则定义了从类类型到其他类型的隐式转换。[转换构造函数](https://lambdaxing.github.io/posts/C++-constructor/#隐式的类类型转换)和类型转换运算符共同定义了类类型转换（class-type conversions），也被称作用户定义的类型转换（user-defined conversions）。
+&emsp;&emsp;只接受单独一个实参的非显式构造函数定义了从实参类型到类类型的隐式类型转换；而非显式的类型转换运算符则定义了从类类型到其他类型的隐式转换。[转换构造函数](https://lambdaxing.github.io/posts/Cpp-constructor/#隐式的类类型转换)和类型转换运算符共同定义了类类型转换（class-type conversions），也被称作用户定义的类型转换（user-defined conversions）。
 
 ## 类型转换运算符
 

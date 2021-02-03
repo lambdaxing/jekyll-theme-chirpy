@@ -57,8 +57,8 @@ tags: [Cpp]
 
 ## 其他
 
-+ **[copy constructor](https://lambdaxing.github.io/posts/C++-class-copy/#copy-constructor)**
-+ **[move constructor](https://lambdaxing.github.io/posts/C++-class-move/#move-constructor-and-move-assignment-operator)**
++ **[copy constructor](https://lambdaxing.github.io/posts/Cpp-class-copy/#copy-constructor)**
++ **[move constructor](https://lambdaxing.github.io/posts/Cpp-class-move/#move-constructor-and-move-assignment-operator)**
 
 ## OOP 中的 constructor
 
