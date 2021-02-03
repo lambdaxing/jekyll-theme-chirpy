@@ -4,5 +4,7 @@ icon: fas fa-info
 order: 4
 ---
 
-
-> **Note**: Add Markdown syntax content to file `_tabs/about.md` and it will show up on this page.
+&emsp;&emsp;**这里是 lambdaxing 的 notes 和 blogs 网站。**  
+&emsp;&emsp;由于计算机学科既有深度又有广度，漫长的学习过程中免不了遗忘，回去翻书或是借助搜索引擎，过程过于繁琐，知识过于零散。在学习时记录，往后也好回顾和改进，发表在互联网上，源于自己无时无刻不在享受来自互联网的恩惠。  
+&emsp;&emsp;笔记会记录一些经典书籍的内容，但也仅仅只是笔记，经典的书籍永远值得多读。博客写一些总结和遇到的重难点，作为自己的输出。  
+&emsp;&emsp;我查阅过一些资料，也看到其他人写过这样的网络笔记，但还是不太了解相关的规范。如有侵权，请联系我删除。若有错误或不当之处，欢迎指正，谢谢！
