@@ -8,40 +8,38 @@ theme: jekyll-theme-chirpy
 baseurl: ''
 
 # the HTML language tag › https://www.w3.org/International/questions/qa-choosing-language-tags
-lang: en-US
+lang: zh-CN
 
 # Change to your timezone › http://www.timezoneconverter.com/cgi-bin/findzone/findzone
 timezone: Asia/Shanghai
 
 # jekyll-seo-tag settings › https://github.com/jekyll/jekyll-seo-tag/blob/master/docs/usage.md
 # --------------------------
-title: Chirpy                          # the main title
+title: LambdaXing's Website                          # the main title
 
-tagline: A text-focused Jekyll theme   # it will display as the sub-title
+tagline: Notes and Blogs   # it will display as the sub-title
 
 description: >-                        # used by seo meta and the atom feed
-  A minimal, portfolio, sidebar,
-  bootstrap Jekyll theme with responsive web design
-  and focuses on text presentation.
+  Notes and Blogs
 
 # fill in the protocol & hostname for your site, e.g., 'https://username.github.io'
-url: ''
+url: 'https://lambdaxing.github.io'
 
-author: your_full_name                  # change to your full name
+author: lambdaxing                  # change to your full name
 
 github:
-  username: github_username             # change to your github username
+  username: lambdaxing             # change to your github username
 
 twitter:
   username: twitter_username            # change to your twitter username
 
 social:
-  name: your_full_name                  # it will shows as the copyright owner in Footer
-  email: example@doamin.com             # change to your email address
+  name: lambdaxing                  # it will shows as the copyright owner in Footer
+  email: lambdaxing@foxmail.com             # change to your email address
   links:
     # The first element serves as the copyright owner's link
     - https://twitter.com/username      # change to your twitter homepage
-    - https://github.com/username       # change to your github homepage
+    - https://github.com/lambdaxing       # change to your github homepage
     # Uncomment below to add more social links
     # - https://www.facebook.com/username
     # - https://www.linkedin.com/in/username
@@ -81,7 +79,7 @@ theme_mode:   # [light|dark]
 img_cdn: ''
 
 # the avatar on sidebar, support local or CORS resources
-avatar: https://cdn.jsdelivr.net/gh/cotes2020/chirpy-images/commons/avatar.jpg
+avatar: https://avatars.githubusercontent.com/u/78272323?s=460&u=838186963e18b410c7b5a9d3507a9b2696bb1f15&v=4
 
 # boolean type, the global switch for ToC in posts.
 toc: true
