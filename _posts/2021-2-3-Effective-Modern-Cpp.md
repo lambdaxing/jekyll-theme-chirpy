@@ -35,8 +35,8 @@ f(expr);
 
 ### Item 3: Understand decltype
 
-&emsp;&emsp;decltype —— declared type —— 得出名字的声明类型。即， decltype 会得出变量或表达式的类型而不作任何修改，注意与 auto 的不同，decltype 会保留引用和顶层 const 属性。不过，如果是比仅有名字更复杂的左值表达式，即一个左值表达式不仅是一个型别为 T 的名字，decltype 保证得出的类型总是左值引用。例如，一个 T 类型的变量 x（x 是左值），单纯的名字 x 得出 T，特殊的 (x) 也是左值，却会得出 T&。不过，绝大多数左值表达式都自带一个左值引用饰词。  
-&emsp;&emsp;C++14 的 decltype(auto) 表示 auto 以上面的 decltype 的规则推导。条款 2 提到 auto 使用模板类型推导规则，decltype(auto) 使用 decltype 的规则从初始化表达式中推导类型。  
+&emsp;&emsp;`decltype` —— declared type —— 得出名字的声明类型。即， `decltype` 会得出变量或表达式的类型而不作任何修改，注意与 `auto` 的不同，`decltype` 会保留引用和顶层 const 属性。不过，如果是比仅有名字更复杂的左值表达式，即一个左值表达式不仅是一个型别为 `T` 的名字，`decltype` 保证得出的类型总是左值引用。例如，一个 `T` 类型的变量 `x`（`x` 是左值），单纯的名字 `x` 得出 `T`，特殊的 `(x)` 也是左值，却会得出 `T&`。不过，绝大多数左值表达式都自带一个左值引用饰词。  
+&emsp;&emsp;C++14 的 `decltype(auto)` 相当于用 `auto` 以 `decltype` 的规则从初始化表达式推导出变量的类型。条款 2 提到 `auto` 使用模板类型推导规则，`decltype(auto)` 使用 `decltype` 的规则从初始化表达式中推导类型。  
 &emsp;&emsp;[auto 和 decltype 在《 C++ Primer 》中的描述。](https://lambdaxing.github.io/posts/Cpp-auto-and-decltype/)下面这个例子来自书上：
 
 ```c++
@@ -49,13 +49,37 @@ authAndAccess(Container&& c, Index i)
 }
 ```
 
-&emsp;&emsp;c 的声明是个万能引用，decltype(auto) 确保了函数的返回类型与 Container 的 [] 返回类型保持一致。无论 Container 的 [] 返回引用或值，都没问题。
+&emsp;&emsp;`c` 的声明是个万能引用，`decltype(auto)` 确保了函数的返回类型与 `Container` 的 `[]` 返回类型保持一致。无论 `Container` 的 `[]` 返回引用或值，都没问题。
 
 ### Item 4: Know how to view deduced types
 
 &emsp;&emsp;撰写代码阶段通过 IDE 编辑器（鼠标指针悬停等方式）可显示出某个程序实体的类型。这是因为，IDE 让 C++ 编译器（或至少也是其前端）在 IDE 内执行一轮。  
 &emsp;&emsp;在编译阶段，使用想要显示的类型导致编译错误，该类型就会被报告错误的消息显示出。例如，以该类型具现一个仅有声明没有定义的类模板。  
-&emsp;&emsp;运行时阶段，通过 typeid 和 std::typeinfo::name 显示类型信息会依编译器的不同产生不同的非人类可读的结果，并且标准规格上说，std::type_info::name 处理类型的方式就仿佛是向函数模板按值传递形参一样，因此，引用、const等饰词将被忽略或移除。不过，Boost 的 TypeIndex 库可以胜任这份工作。  
+&emsp;&emsp;运行时阶段，通过 `typeid` 和 `std::typeinfo::name` 显示类型信息会依编译器的不同产生不同的非人类可读的结果，并且标准规格上说，`std::type_info::name` 处理类型的方式就仿佛是向函数模板按值传递形参一样，因此，引用、const 等饰词将被忽略或移除。Boost 的 TypeIndex 库可以胜任这份工作。  
 
 ## Chapter 2. auto
 
+### Item 5: Prefer auto to explicit type declarations
+
+&emsp;&emsp;`auto` 避免了潜在的未初始化风险，因为 `auto` 通过初始化物推导变量类型。`auto` 可用于声明 lambda 表达式，在 C++14 中，lambda 表达式的形参中也可以使用 `auto`。并且，使用 `auto` 声明的、存储着一个闭包的便利和该闭包是同一类型，从而它要求的内存量也和该闭包一样。而使用 `std::function` 声明的、存储着一个闭包的变量是 `std::function` 的一个实例，一般都会比 `auto` 声明的变量使用更多内存，且调用闭包的行为也来得慢。  
+&emsp;&emsp;显式指定类型可能导致既不想要，也没想到的隐式类型转换。除非，你无时无刻都明确了解初始化物与声明中显式指定的类型相容或有正确的转换关系。使用 `auto`，无需担心声明变量的类型和它的初始化表达式的类型之间的不匹配等问题。  
+&emsp;&emsp;`auto` 会带来源代码可读性问题吗？这依每个人的专业判断而不同。在其他语言中，`auto` 已不是什么新鲜事。软件开发社区已经积累了丰富的类型推导方面的经验，而这也说明此类技术并不会与撰写和维护大型的、工业强度的基础代码这样的工作产生冲突。在很多情况下，对于对象类型的抽象理解与了解它的精确类型同等有用，例如容器、计数器、智能指针。别忘了再取个好一点的变量名字。  
+&emsp;&emsp;`auto` 随其初始化表达式的类型变化而自动随之改变，这意味着一些重构动作被顺手做掉了。  
+
+### Item 6: Use the explicitly typed initializer idiom when auto deduces undesired types
+
+&emsp;&emsp;标准库很多地方使用了代理类的设计：模拟或增广其他类型的类。代理类往往隐藏在背后，客户使用代理类如同使用代理类所代理的那个类型一般。“隐形”代理类和 `auto` 无法和平共处。代理类的对象往往会设计成仅仅维持到到单个语句之内，所以，创建这种类的变量，往往就是违反了基本的库设计的假定前提。例如，在一个 `+` 与 `=` 的赋值语句中（`Matrix sum = m1 + m2 + m3;`），代理类在 `+` 操作中生产出来，在 `=` 操作中被隐式地当作代理的那个类型被赋值过去，语句结束代理类就被销毁。把 `Matrix` 换成 `auto` 得到的 `sum` 将是一个代理类对象，其内部可能并没有真正的值。  
+&emsp;&emsp;如何发现问题（代理类）？
+
++ 使用代理类的库往往会在其文档中写明这一点。
++ 代理类大多数是由客户意欲调用的函数所返回的，函数签名往往会反应出它们的存在。例如，特化的 `std::vector<bool>` 的 `[]` 返回一个其内部定义 `std::vector<bool>::referenc` 模拟 `bool`。
++ 仔细观察你所使用的接口。
+
+&emsp;&emsp;如何解决问题（用 or 不用 `auto`）？只要问题出在 `auto` 被决断成了代理类型，而非意欲代理的那个类型，解决方案都不必放弃 `auto`。`auto` 本身并不是问题，问题在于 `auto` 没有推导你想推导出的类型。解决方法应该是强制进行另一次类型转换 —— 带显式类型的初始化物习惯用法（the explicitly typed
+initializer idiom）。即，`auto sum = static_cast<Matrix>(m1 + m2 + m2);`。这种习惯用法同样可以应用于想要强调意在创建一个类型有异于初始化表达式类型的变量的场合，让事情变得显而易见：
+
+```c++
+    // d 是一个 double
+    int index = d * c.size();   // 强制转换的事实含含糊糊   
+    auto index = static_cast<int>(d * c.size());    // 显而易见的做法
+```
