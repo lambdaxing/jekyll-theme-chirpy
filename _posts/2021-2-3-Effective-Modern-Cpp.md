@@ -32,3 +32,30 @@ f(expr);
 &emsp;&emsp;auto 类型推导就是模板类型推导。当某变量采用 `auto` 来声明时，`auto` 就扮演了模板中的 `T` 这个角色，而变量的类型修饰符则扮演的是 `ParamType` 的角色。从概念上来说，auto 类型推导相当于编译器为每个 `auto` 声明，生成了一个模板和一次使用对应初始化表达式对该模板的调用。所有的情况都一模一样，在 `auto i` 、`const auto i` 、`const auto& i` 中，`auto` 相当于 `T` ，`i` 前面的整个声明相当于 `ParamType`。  
 &emsp;&emsp;不过，有一个例外。auto 类型推导会假定用大括号括起的初始化表达式代表一个 `std::initializer_list`，即在表达式 `auto x = {11, 23, 9};` 中，auto 类型推导得到 `x` 的类型是 `std::initializer_list<int>`。模板类型推导不会这么做，如果可以的话，编译器既要从初始值 `{11，23，9}` 中推导出 `std::initializer_list<T>` 中的 `T`为 `int` ，还要推导出模板中的 `T` 为 `std::initializer_list`，编译器才不会这么自作多情，也不该这么自作多情，只不过它对 `auto` 却是情有独钟。记住这条规则，也记住，两者的类似只是概念上的类似，而不是具体的实现手法。  
 &emsp;&emsp;特别注意，C++14 允许使用 `auto` 说明函数的返回类型需要推导，同时允许在 lambda 的形参声明中用到 `auto` 来实现 lambda 参数类型的自动推导。这些 `auto` 用法使用**模板类型推导**，而不是 auto 类型推导。  
+
+### Item 3: Understand decltype
+
+&emsp;&emsp;decltype —— declared type —— 得出名字的声明类型。即， decltype 会得出变量或表达式的类型而不作任何修改，注意与 auto 的不同，decltype 会保留引用和顶层 const 属性。不过，如果是比仅有名字更复杂的左值表达式，即一个左值表达式不仅是一个型别为 T 的名字，decltype 保证得出的类型总是左值引用。例如，一个 T 类型的变量 x（x 是左值），单纯的名字 x 得出 T，特殊的 (x) 也是左值，却会得出 T&。不过，绝大多数左值表达式都自带一个左值引用饰词。  
+&emsp;&emsp;C++14 的 decltype(auto) 表示 auto 以上面的 decltype 的规则推导。条款 2 提到 auto 使用模板类型推导规则，decltype(auto) 使用 decltype 的规则从初始化表达式中推导类型。  
+&emsp;&emsp;[auto 和 decltype 在《 C++ Primer 》中的描述。](https://lambdaxing.github.io/posts/Cpp-auto-and-decltype/)下面这个例子来自书上：
+
+```c++
+tempalte<typename Container, typename Index>
+decltype(auto)
+authAndAccess(Container&& c, Index i)
+{
+    authenticateUser();
+    return std::forward<Container>(c)[i];
+}
+```
+
+&emsp;&emsp;c 的声明是个万能引用，decltype(auto) 确保了函数的返回类型与 Container 的 [] 返回类型保持一致。无论 Container 的 [] 返回引用或值，都没问题。
+
+### Item 4: Know how to view deduced types
+
+&emsp;&emsp;撰写代码阶段通过 IDE 编辑器（鼠标指针悬停等方式）可显示出某个程序实体的类型。这是因为，IDE 让 C++ 编译器（或至少也是其前端）在 IDE 内执行一轮。  
+&emsp;&emsp;在编译阶段，使用想要显示的类型导致编译错误，该类型就会被报告错误的消息显示出。例如，以该类型具现一个仅有声明没有定义的类模板。  
+&emsp;&emsp;运行时阶段，通过 typeid 和 std::typeinfo::name 显示类型信息会依编译器的不同产生不同的非人类可读的结果，并且标准规格上说，std::type_info::name 处理类型的方式就仿佛是向函数模板按值传递形参一样，因此，引用、const等饰词将被忽略或移除。不过，Boost 的 TypeIndex 库可以胜任这份工作。  
+
+## Chapter 2. auto
+
