@@ -23,9 +23,9 @@ f(expr);
 
 + 当 `ParamType` 是指针（`T*` 、`const T*`）或引用（`T&` 、`const T&`），类型推导会忽略 `expr` 的引用（如果有的话），然后对 `expr` 的类型和 `ParamType` 执行模式匹配，得出 `T`。
 + 当 `ParamType` 是个万能引用（`T&&`），左值的 `expr` 推导出 `T` 和 `ParamType` 都为左值引用，`param` 的类型也是左值引用。右值的 `expr` 同前一种情况，执行模式匹配。  
-+ `ParamType` 非指针和引用（`T` 、`const T`），就是所谓的按值传递。`param` 将是一个 `expr` 的副本，`expr` 的引用属性、顶层 const 属性和 volatile 属性都会被忽略，底层 const 属性会被保留进推导中。例如，若 `expr` 的类型是 `const char* const` （指向 `const char` 的 `const` 指针），`T` 和 `const T` 推导出的 `T` 都为 `const char*` （指向 `const char` 的指针）。  
++ `ParamType` 非指针和引用（`T` 、`const T`），就是所谓的按值传递。`param` 将是一个 `expr` 的副本，`expr` 的引用属性、顶层 const 属性和 volatile 属性都会被忽略，底层 const 属性会被保留进推导中。例如，若 `expr` 的类型是 `const char* const` （指向 `const char` 的 `const` 指针），`ParamType` 为 `T` 和 `const T` 都推导出的 `T` 为 `const char*` （指向 `const char` 的指针）。  
 
-&emsp;&emsp;当数组和函数做为实参时，按值传递（`T`），数组推导出的 `T` 为指向数组内部元素的指针，函数推导出的 `T` 为函数指针。按引用传递（`T&`），数组推导出的 `T` 为数组类型（包含数组大小），函数推导出的 `T` 为函数类型。注意，后一种情况推导出的 `T` 并不是 `param` 的类型 `ParamType`，还要加上 `&` 。  
+&emsp;&emsp;当数组和函数作为实参时，按值传递（`ParamType` 为 `T`），数组会推导 `T` 为指向数组内部元素的指针，函数会推导 `T` 为函数指针。按引用传递（`ParamType` 为 `T&`），数组会推导 `T` 为数组类型（包含数组大小），函数会推导 `T` 为函数类型。注意，后一种情况推导出的 `T` 并不是 `param` 的类型 `ParamType`，还要加上 `&` 。  
 
 ### Item 2: Understand auto type deduction
 
