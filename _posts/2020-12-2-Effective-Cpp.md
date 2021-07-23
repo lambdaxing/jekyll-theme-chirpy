@@ -49,8 +49,8 @@ class GamePlayer {
 ### 03 Use const whenever possible
 
 &emsp;&emsp;尽可能使用 const 。  
-&emsp;&emsp;该条款主要讲了 `const` 如何用、怎么用以及何时用，大部分都十分了解了。“成员函数是 `const`” 讲述了两个流行概念：bitwise constness（又称 physical constness）和 logical constness。bitwise const 说成员函数只有在不更改对象之任何成员变量（`static` 除外）时才可以说是 `const`，也就是说它不更改对象内任何一个bit。但是当只有指针隶属与对象（而非其所指之物），成员函数更改了“指针所指物”时不会引发编译器异议，这导致了反直观的结果。logical constness 主张 `const` 成员函数可以修改它所处理的对象内的某些 bits，但只有在客户端侦测不出来的情况下才得如此。但在 `const` 成员函数内部编译器坚持 bitwise constness，此时利用 C++ 的一个与 `const` 相关的摆动场：`mutable`：释放掉 non-static 成员变量的 bitwise constness 约束。编译器强制实施 bitwise constness，但编写程序时应该使用“概念上的常量性“（conceptual constness）”。  
-&emsp;&emsp; 一个非常重要的C++特性：两个成员函数如果只是常量性（constness）不同，可以被重载。重载 `const` 成员函数时，实现函数（如 `operator[]`）的机能一次并使用它两次，即令其中一个调用另一个，好处大大的，这促使我们将常量性转除（casting away constness）。有时候 const 版本完全做掉了non-const版本该做的一切，唯一的不同是其返回类型多了一个 `const` 修饰。这种情况下将返回值的 `const` 转除是安全的，因为不论谁调用 non-const 函数，都首先有一个 non-const 对象，否则就不能够调用 non-const 函数。所以令 non-const 调用其 const 兄弟是一个避免代码重复的安全做法，即使过程中需要一个转型动作。下面是代码：
+&emsp;&emsp;该条款主要讲了 `const` 如何用、怎么用以及何时用，大部分都十分了解了。“成员函数是 `const`” 讲述了两个流行概念：bitwise constness（又称 physical constness）和 logical constness。bitwise constness 说成员函数只有在不更改对象之任何成员变量（`static` 除外）时才可以说是 `const`，也就是说它不更改对象内任何一个bit。但是当只有指针隶属于对象（而非其所指之物），成员函数更改了“指针所指物”时不会引发编译器异议，这导致了反直观的结果。logical constness 主张 `const` 成员函数可以修改它所处理的对象内的某些 bits，但只有在客户端侦测不出来的情况下才得如此。但在 `const` 成员函数内部编译器坚持 bitwise constness，此时利用 C++ 的一个与 `const` 相关的摆动场：`mutable`：释放掉 non-static 成员变量的 bitwise constness 约束。编译器强制实施 bitwise constness，但编写程序时应该使用“概念上的常量性“（conceptual constness）”。  
+&emsp;&emsp; 一个非常重要的C++特性：两个成员函数如果只是常量性（constness）不同，可以被重载。重载 `const` 成员函数时，实现函数（如 `operator[]`）的机能一次并使用它两次，即令其中一个调用另一个，好处大大的，这促使我们将常量性转除（casting away constness）。有时候 const 版本完全做掉了 non-const 版本该做的一切，唯一的不同是其返回类型多了一个 `const` 修饰。这种情况下将返回值的 `const` 转除是安全的，因为不论谁调用 non-const 函数，都首先有一个 non-const 对象，否则就不能够调用 non-const 函数。所以令 non-const 调用其 const 兄弟是一个避免代码重复的安全做法，即使过程中需要一个转型动作。下面是代码：
 
 ```c++
 class TextBlock {
@@ -84,7 +84,7 @@ class TextBlock {
 &emsp;&emsp;永远在对象使用之前呢将它初始化。内置类型需手工完成，而除内置类型以外，初始化的责任落在构造函数（constructors）身上：确保**每一个构造函数**都将对象的**每一个成员**初始化。C++ 规定，对象的成员变量的初始化动作发生在进入构造函数本体之前。因此，较佳的构造函数写法是使用所谓的 member initialization list（成员初始值列表）替换构造函数体内部的赋值动作。同样道理，当想要 default 构造一个成员变量，使用成员初始值列指定 nothing（`()`） 作为初始化实参即可。虽然编译器会为在“成员初始值列”中没有指定初值的成员变量自动调用 `default` 构造函数，但是在初始值列中列出所有成员变量是有用的，以免记住哪些成员变量可以无需初值。若内置类型被“成员初始值列”遗漏，则可能开启“不明确行为”的潘多拉盒子。特别注意：某些成员变量是 const 或 references ,它们就一定需要初值，不能被赋值。总之，**总是使用成员初始值列表**是最简单的做法。这样做有时候绝对必要，又往往比赋值更高效。  
 &emsp;&emsp;条款介绍了为避免构造函数中重复无聊的工作，将“赋值表现像初始化一样好”的成员变量改用赋值操作，移往某个函数（通常是private）供所有构造函数调用。C++11 的委托构造函数应该可以实现同样的效果，且无需赋值操作吧。  
 &emsp;&emsp;C++ 有着十分固定的“成员初始化次序”，按其成员声明次序初始化成员。因此，在成员初始值列表中列各个成员时应以其声明次序为序。  
-&emsp;&emsp;*“不同编译单元内定义之 non-local static对象”的初始化次序。我没看懂这个。不同编译单元内的 non-local static 对象的初始化顺序无明确定义，我们应该通过将其变为函数内的 local static 对象来用，即以“函数调用”（返回一个 refrence 指向 local static 对象）替换“直接访问 non-local static 对象”,这样就保证了获得那个 reference 指向一个历经初始化的对象？*
+&emsp;&emsp;“不同编译单元内定义之 non-local static 对象”的初始化次序。不同编译单元内的 non-local static 对象的初始化顺序无明确定义，我们应该通过将其变为函数内的 local static 对象来用，即以 “函数调用” （返回一个 reference 指向 local static 对象）替换 “直接访问 non-local static 对象”,这样就保证了获得的 reference 指向一个历经初始化的对象。
 
 ## 二. Constructors, Destructors, and Assignment Operators
 
@@ -151,7 +151,7 @@ private:
 
 &emsp;&emsp;绝不在构造和析构过程中调用 virtual 函数。  
 &emsp;&emsp;不该在构造函数和析构函数期间调用 virtual 函数。base class 构造函数的执行早于 derived class 构造函数，当 base class 构造函数执行时，derived class 的成员变量尚未初始化。如果此期间调用的 virtual 函数下降至 derived classes 阶层，derived class 的函数几乎必然取用 local 成员变量（未初始化），C++禁止这种错误发生。在 derived class 对象的 base class 构造期间，对象的类型是 base class 而不是 derived class。不只 virtual 函数会被编译器解析（resolve to）base class，若使用运行期类型信息（runtime type information，例如 `dynamic_cast`（见条款27）和 `typeid`），也会把对象视为 base class 类型。  
-&emsp;&emsp;相同道理也使用析构函数。一旦 derived class 析构函数开始执行，对象内的 derived class 成员变量便呈现未定义值，所以 C++ 使它们仿佛不存在。进入 base class 析构函数后对象就成为一个 base class 对象，而 C++ 的任何部分包括 virtual 函数、dynamic_cast 等等也就那么看待它。  
+&emsp;&emsp;相同道理也适用析构函数。一旦 derived class 析构函数开始执行，对象内的 derived class 成员变量便呈现未定义值，所以 C++ 使它们仿佛不存在。进入 base class 析构函数后对象就成为一个 base class 对象，而 C++ 的任何部分包括 virtual 函数、dynamic_cast 等等也就那么看待它。  
 &emsp;&emsp;注意：确定构造函数和析构函数都没有（在对象被创建和销毁期间）调用 virtual 函数，**而它们调用的所有函数也都服从同一约束**（在构造析构中，通过非 virtual 函数调用 virtual 函数。这一做法通常不会引发任何编译器和连接器的抱怨，但可能会造成事与愿违的程序结果。）
 
 &emsp;&emsp;无法使用 virtual 函数从 base class 向下调用，在构造函数期间可以通过 “令 derived classes 将必要的构造信息向上传递至 base class 构造函数” 加以弥补。通过层层的构造函数向上传参至 base class，中途可使用 derived classes 的 static 函数作为辅助函数。`static` 函数不可能意外指向“初期未成熟的 derived classes 对象内尚未初始化的成员变量”。因此，不同于使用 virtual 函数，这是可行的。
@@ -215,7 +215,7 @@ Widget& Widget::operator=(const Widget& rhs)
 ```c++
 class Widget{
 ...
-    void swap(Widget& rhs);     // 交换 *this 和 rhs 的数据;详件条款 29
+    void swap(Widget& rhs);     // 交换 *this 和 rhs 的数据;详见条款 29
 ...
 }
 
