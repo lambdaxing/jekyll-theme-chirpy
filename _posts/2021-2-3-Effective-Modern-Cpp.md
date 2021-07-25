@@ -341,8 +341,8 @@ std::shared_ptr<Investment> sp =    // 将 std::unique_ptr 型别的对象
 &emsp;&emsp;使用 std::weak_ptr 来代替可能空悬的 std::shared_ptr。std::weak_ptr 可能的用武之地包括缓存，观察者列表，以及避免 std::shared_ptr 指针环路。  
 &emsp;&emsp;std::weak_ptr 和 std::shared_ptr 的对象尺寸相同，它们和 std:: shared_ptr 使用同样的控制块，其构造，析构，赋值操作都包含了对引用计数的原子操作。std::weak_ptr 不干涉对象的共享所有权，不会影响所指渉到的对象的引用计数，实际上控制块里还有第二个引用计数，std::weak_ptr 操作的就是这第二个引用计数。  
 
-### Item 21: Prefer std::make_unique and std::make_shared to direct use of new 
-
+### Item 21: Prefer std::make_unique and std::make_shared to direct use of new
+ 
 &emsp;&emsp;三个 make 系列函数：std::make_unique，std::make_shared，std::allocate_shared。make 系列函数会把一个任意实参集合完美转发给动态分配内存的对象的构造函数，并返回一个指渉到该对象的智能指针。std::allocate_shared 的行为和 std::make_shared 一样，只不过它的第一个实参是个用以动态分配内存的分配器对象。  
 &emsp;&emsp;优先选用 make 系列函数的原因：
 
@@ -377,3 +377,61 @@ std::shared_ptr<Investment> sp =    // 将 std::unique_ptr 型别的对象
 
 &emsp;&emsp;一旦发现自己处在一个不能够或者不适合使用 std::make_shared 的境地，就要确保之前见过的异常安全问题。最好的办法就是确保在一条语句里且不做其他任何事经 new 表达式的结果传递给智能指针的构造函数，以阻止编译器在 new 表达式的评估求值和调用智能指针的构造函数并接管 new 表达式产生的对象这个过程之间放出异常来。之后即使在智能指针的构造函数产生异常，也不会发生问题。  
 
+### Item 22: When using the Pimpl Idiom, define special member functions in the implementation file
+
+&emsp;&emsp;Pimpl (pointer to implementation) Idiom：把某类的数据成员用一个指渉到某实现类（或结构体）的指针替代，尔后把原来在主类中的数据成员放置到实现类中，并通过指针间接访问这些数据成员。Pimpl Idiom 降低类的客户和类实现者之间的依赖性，减少了构建次数。  
+&emsp;&emsp;Pimpl Idiom 的第一部分，是声明一个指针型别的数据成员，指渉到一个非完整型别，第二部分是通过动态分配和回收持有从前在原始类里的那些数据成员的对象，而分配和回收代码则放在实现文件中。  
+&emsp;&emsp;std::unique_ptr 可以支持非完整型别，Pimpl Idiom 是 std::unique_ptr 最广泛应用的场景之一。但使用 std::unique_ptr 实现 Pimpl Idiom 却不像看起来那么顺风顺水。  
+&emsp;&emsp;原因是，在使用了 std::unique_ptr 的类里，若未声明析构函数（因为显而易见不需要，编译器会为我们生成），也就无需为其撰写代码，而编译器为我们生成析构函数，并在其内插入代码来调用类中的数据成员 `pImpl`（一个指渉到非完整型别的 std::unique_ptr），`pImpl` 的默认析构器在 std::unique_ptr 内部使用 `delete` 运算符来针对裸指针实施析构。在实施 `delete` 运算符之前，C++11 中的 `static_assert` 要去确保裸指针未指渉到非完整型别。这样一来，当编译器为带有指渉非完整型别的 std::unique_ptr 的类的析构函数产生代码时，通常就会遇到一个失败的 `static_assert`，从而导致错误信息的产生。这个错误信息和该类被析构的位置（例如，离开作用域）有关，那一刻析构函数被调用，而特种成员函数基本上是隐式 inline 的。  
+&emsp;&emsp;解决上面这个问题很简单：保证在生成析构代码处， `pImpl` 指向的型别完整即可，只要型别的定义可以被看到，它就是完整的。因此，成功编译的关键在于让编译器看到析构函数的函数体的位置在实现文件内部的未完整型别的定义之后。  
+
+```c++
+class Widget{                           // 位于头文件 “widget.h” 内
+public:
+    Widget();
+    ~Widget();                          // 仅声明！
+
+    Widget(Widget&& rhs);               // 仅声明！
+    Widget& operator=(Widget&& rhs);    // 仅声明！
+    Widget(const Widget& rhs);          // 仅声明！
+    Widget& operator=(const Widget& rhs);
+    ...
+
+private:
+    struct Impl;                        // 声明实现结构体
+    std::unique_ptr<Impl> pImpl;        // 以及指渉到它的智能指针
+};
+
+#include "widget.h"                     // 位于实现文件 “widget.cpp” 内
+#include "gadget.h"
+#include <string>
+#include <vector>
+
+struct Widget::Impl {           // Widget::Impl 的实现
+    std::string name;           // 包括本在 Widget 中的数据成员
+    std::vector<double> data;
+    Gadget g1, g2, g3;          // Gadget 是某种用户自定义型别
+};
+
+Widget::Widget() : pImpl(std::make_unique<Impl>()) {}
+// ~Widget 的定义放在 Widget::Impl 定义之后
+// 编译器在这儿生成代码，析构时 Widget::Impl 是个完整型别了
+Widget::~Widget() = default;          
+Widget::Widget(Widget&& rhs) = default;             // 在这里放置定义
+Widget& Widget::operator=(Widget&& rhs) = default;  // 理由类似
+
+Widget::Widget(const Widget& rhs)
+: pImpl(std::make_unique<Impl>(*rhs.pImpl))
+{}
+
+Widget& Widget::operator=(const Widget& rhs)
+{
+    *pImpl = *rhs.pImpl;
+    return *this;
+}
+```
+
+&emsp;&emsp;在 `Widget` 中声明析构函数的举动会阻止编译器产生移动操作。需要支持移动操作就必须自己声明，而编译器生成的移动赋值操作需要在重新赋值前析构 `pImpl` 指渉到的对象，并且编译器会在移动构造函数内抛出异常的事件中，生成析构 `pImpl` 的代码。前面说过，对 `pImpl` 析构要求 `Impl` 具备完整型别。因此，如上面代码所示，移动操作的处理手法是如法炮制，移动操作的定义被移入实现文件里了。  
+&emsp;&emsp;Pimpl Idiom 是一种可以在类实现和类使用者之间减少编译依赖性的方法，但从概念上说，Pimpl Idiom 并不能改变类所代表的事物。编译器不会为像 std::unique_ptr 这样的只移型别生成复制操作，即使编译器可以生成，其生成的函数也只能实施浅复制，而我们希望的则是深复制。上面利用了编译器为 `Impl` 类创建的复制操作会自动逐项复制这些字段的特性，采用 `Widget::Impl` 的编译器生成的复制操作实现了 `Widget` 的复制操作。  
+&emsp;&emsp;值得指出的是，如果我们在这里使用 std::shared_ptr 而非 std::unique_ptr 来实现 `pImpl`，则本条款的建议不再适用，无需在 `Widget` 中声明析构函数，编译器乐意生成的特殊成员函数会精确地按我们想要的方式运作。两者的不同源自它们对于自定义析构器的支持的不同。std::unique_ptr 的析构器型别是智能指针型别的一部分，析构器型别在编译期已知，这使得编译器会产生更小尺寸的运行期数据结构以及更快速的运行期代码。而如此高效带来的后果就是欲使用编译器生成的特种函数，就要求其指渉到的型别必须是完整型别。std::shared_ptr 的析构器型别并非智能指针型别的一部分，这就需要更大尺寸的运行时期数据结构以及更慢一些的目标代码，但在使用编译器生成的特种函数时，并不要求其指渉到的型别是完整型别。  
+&emsp;&emsp;就 Pimpl Idiom 而言，在专属所有权的情景下，std::unique_ptr 是完成任务的合适工具。而在共享所有权的情景下，std::shared_ptr 成为合适的设计选项，就大可不必忍受 std::unique_ptr 所带来的必须自行撰写一系列函数定义的煎熬。  
