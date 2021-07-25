@@ -334,3 +334,46 @@ std::shared_ptr<Investment> sp =    // 将 std::unique_ptr 型别的对象
 
 &emsp;&emsp;通常的控制块要更加复杂，使用了继承，甚至会用到虚函数（用以确保所指渉到的对象被适当地析构）。  
 &emsp;&emsp;一旦你将资源的生存期托管给了 std::shared_ptr ，就不能再更改注意了。即使引用计数为一，也不能回收该资源的所有权，并让一个 std::unique_ptr 来管理它。和 std::unique_ptr 的另一个不同是，std::shared_ptr 的 API 仅被设计用来处理指渉到单个对象的指针。并没有所谓的 `std::shared_ptr<T[]>`。另一方面，std::shared_ptr 支持从派生类到基类的指针型别转换，`std::unique_ptr<T>` 也支持，但 `std::unique_ptr<T[]>` 禁止此型别转换。  
+
+### Item 20: Use std::weak_ptr for std::shared_ptr-like pointers that can dangle
+
+&emsp;&emsp;std::weak_ptr 像 std::shared_ptr 那样运作，又无需参与管理所指渉到的对象的共享所有权（不影响其指渉对象的引用计数）。它通过跟踪指针何时空悬来判断其所指渉到的对象已不复存在，从而处理其所指渉到的对象有可能已被析构的问题。std::weak_ptr 不能提领，也不能检查是否为空，因为 std::weak_ptr 并不是一种独立的智能指针，而是 std::shared_ptr 的一种扩充。std::weak_ptr 一般是通过 std::shared_ptr 来创建的。  
+&emsp;&emsp;使用 std::weak_ptr 来代替可能空悬的 std::shared_ptr。std::weak_ptr 可能的用武之地包括缓存，观察者列表，以及避免 std::shared_ptr 指针环路。  
+&emsp;&emsp;std::weak_ptr 和 std::shared_ptr 的对象尺寸相同，它们和 std:: shared_ptr 使用同样的控制块，其构造，析构，赋值操作都包含了对引用计数的原子操作。std::weak_ptr 不干涉对象的共享所有权，不会影响所指渉到的对象的引用计数，实际上控制块里还有第二个引用计数，std::weak_ptr 操作的就是这第二个引用计数。  
+
+### Item 21: Prefer std::make_unique and std::make_shared to direct use of new 
+
+&emsp;&emsp;三个 make 系列函数：std::make_unique，std::make_shared，std::allocate_shared。make 系列函数会把一个任意实参集合完美转发给动态分配内存的对象的构造函数，并返回一个指渉到该对象的智能指针。std::allocate_shared 的行为和 std::make_shared 一样，只不过它的第一个实参是个用以动态分配内存的分配器对象。  
+&emsp;&emsp;优先选用 make 系列函数的原因：
+
++ 软件工程的一个重要原则：代码冗余应该避免。如下面的示例代码所示，使用 new 的版本将被创建对象的型别重复写了两遍，一次发生在声明智能指针对象型别时，另一次发生在 new 操作符后面指定 new 的对象型别。
++ 第二个原因就是老生常谈的异常安全性。由于 C++ 对函数调用的实参求值顺序不作强制要求，进而容易因异常安全造成函数调用过程中新分配资源的泄露。  
++ 性能提升：std::make_shared 会让编译器有机会利用更简洁的数据结构产生更小更快的代码。
+
+```c++
+    processWidget(std::shared_ptr<Widget>(new Widget), // 潜在的
+                    computePriority());                // 资源泄露
+    processWidget(std::make_shared<Widget>(),  // 不会发生潜在的资源泄露
+                    computePriority()):)
+                    
+     // 引发两次内存分配：
+     // 1. new 为 Widget 进行一次内存分配
+     // 2. std::shared_ptr 的构造函数分配控制块的内存
+    std::shared_ptr<Widget> spw(new Widget); 
+
+    // 一次内存分配足矣：
+    // std::make_shared 分配单块内存
+    // 即保存 Widget 对象又保存与其相关联的控制块
+    auto spw = std::make_shared<widget>();
+```
+
+&emsp;&emsp;上面提到的优化减小了程序的静态尺寸，因为代码只包含一次内存分配调用，同时还增加了可执行代码的运行速度，因为内存是一次性分配出来的。  
+
+&emsp;&emsp;一些不能或者不应该使用 make 系列函数的情景：
+
++ 所有的 make 系列函数都不允许使用自定义析构器。
++ make 系列函数会向对象的构造函数完美转发其形参，对形参进行完美转发的代码使用的是圆括号而给大括号。假如需要使用大括号初始化物来创建指渉到对象的指针，就必须直接使用 new 表达式了。但也有变通做法：使用 auto 型别推导，从大括号初始化物出发，创建一个 std::initializer_list 对象，然后将 auto 创建的对象传递给 make 系列函数。
++ 对于 std::shared_ptr，不建议使用 make 系列函数的额外场景包括：1. 自定义内存管理的类；2. 内存紧张的系统、非常大的对象、以及存在比指渉到相同对象的 std::shared_ptr 生存期更久的 std::weak_ptr。前面提到的优选 make 系列函数的原因中有个性能优势的原因，这源于 std::make_shared 的控制块和托管对象在同一内存块上分配。当对象的引用计数变为零时，对象被析构。然而，托管对象所占用的内存直到与其关联的控制块也被析构时才会被释放，因为同一动态内分配的存溶蚀包含了两者。控制块还包含着第二个引用计数，被称作弱计数。std::weak_ptr 通过检查控制块里的引用计数（而非弱计数）来校验自己是否失效。由于 std::weak_ptr 会指渉到某个控制块（即，弱计数大于零时），该控制块肯定会持续存在，包含它的内存肯定也会持续存在。  
+
+&emsp;&emsp;一旦发现自己处在一个不能够或者不适合使用 std::make_shared 的境地，就要确保之前见过的异常安全问题。最好的办法就是确保在一条语句里且不做其他任何事经 new 表达式的结果传递给智能指针的构造函数，以阻止编译器在 new 表达式的评估求值和调用智能指针的构造函数并接管 new 表达式产生的对象这个过程之间放出异常来。之后即使在智能指针的构造函数产生异常，也不会发生问题。  
+
