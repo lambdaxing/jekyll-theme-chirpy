@@ -108,12 +108,12 @@ initializer idiom）。即，`auto sum = static_cast<Matrix>(m1 + m2 + m2);`。�
 &emsp;&emsp;作为开发类客户代码的程序员，创建对象时选用一对小括号还是大括号可要三思而后行。默认选用大括号的程序员是被其宽泛的应用语境、对隐式窄化型别转换的禁止，以及对最令人苦恼之解析语法的免疫所吸引。小括号的拥护者则可以免受 `auto` 型别推导意外错误之苦，在创建对象时也不会碰到带有 std::initializer_list 型别形参的构造函数设置的路障，但有些场合非用大括号不可。究竟选用哪一方更好，作者的建议是选用任一方并坚持下去。  
 &emsp;&emsp;作为开发模板的程序员，在模板内部进行对象创建时，到底应该使用小括号还是大括号会成为一个棘手问题。这是因为，在模板内部创建对象时并不知道对象的型别（对象的型别由使用者在具现化模板时指定的嘛），自然也就不知道该型别的大括号和小括号表达些什么。使用大括号还是小括号，模板的作者不可能下这个判断，只有调用者才有决定权。标准库函数 `std::make_unique` 和 `std::make_shared` 就面临这样的问题，解决办法是在内部使用了小括号，并把这个决定以文档的形式广而告之，作为其接口的组成部分。书中注释中说，更弹性的设计，也就是允许调用者自行决定在从模板中生成的函数内使用小括号还是大括号的设计，是可以实现的。参阅[这里](https://isocpp.org/blog/2013/06/intuitive-interface-part-1-andrzej-krzemieski)。  
 
-### Item8: Prefer nullptr to 0 and NULL
+### Item 8: Prefer nullptr to 0 and NULL
 
 &emsp;&emsp;`0` 和 `NULL` 都不具备指针型别。字面常量 `0` 的型别是 `int`，而标准允许各个实现给予 `NULL` 非 `int` 的整形型别（如 `long`）。`nullptr` 不具备整形型别，也不具备指针型别，但可以把它想成一种任意型别的指针。`nullptr` 的实际型别是 `std::nullptr_t`，并且在一个漂亮的循环定义下，`std::nullptr_t` 的定义被指定为 `nullptr` 的型别。型别 `std::nullptr_t` 可以隐式转换到所有的裸指针型别，这就是为何 `nullptr` 可以扮演所有型别指针的原因。  
 &emsp;&emsp;模板型别推导会将 `0` 和 `NULL` 推导成“错误”型别（即他们的真实型别，而给退而求其次的表示空指针这个意义），这个事实构成了应该在表示空指针时使用 `nullptr` 而非 `0` 或 `NULL` 的压倒性理由。同时，`nullptr` 不会造成 `0` 和 `NULL` 稍不留意就会遭遇的重载决议问题。不过，还是不要在指针型别和整形之间做重载，有些程序员还是会继续使用 `0` 和 `NULL`。  
 
-### Item9: Prefer alias declarations to typedefs
+### Item 9: Prefer alias declarations to typedefs
 
  &emsp;&emsp;除了 `typedef` ，C++11 提供了别名声明（alias declaration）：
 
@@ -253,4 +253,84 @@ auto cbegin(const C& container)->decltype(std::begin(container))
 &emsp;&emsp;C++11 可以通过 `=default`  显式地为这些操作生成编译器的默认行为。  
 &emsp;&emsp;成员函数模板在任何情况下都不会抑制特种成员函数的生成。哪怕，成员函数模板具现出的是这些操作中的某一个，也是如此。  
 
-&emsp;&emsp;
+## Chapter 4. Smart Pointers
+
+### Item 18: Use std::unique_ptr for exclusive-ownership resource management
+
+&emsp;&emsp;`std::unique_ptr` 是小巧、高速的、具备只移型别的智能指针，对托管资源实施专属所有权语义。一个非空的 `std::unique_ptr` 总是拥有其所指涉到的资源。移动一个 `std::unique_ptr` 会将所有权从源指针移至目标指针（源指针被置空）。`std::unique_ptr` 不允许复制，因为如果复制了一个 `std::unique_ptr`，就会得到两个指渉到同一资源的 `std::unique_ptr`，而这两者都认为自己拥有（因此应当析构）该资源。因而，`std::unique_ptr` 是个只移型别。  
+&emsp;&emsp;默认地，资源的析构是通过对 `std::unique_ptr` 内部的裸指针实施 `delete` 完成的。在使用默认析构器（即 `delete` 运算符）的前提下，可以合理地认为 `std::unique_ptr` 和裸指针尺寸相同。在析构过程中 `std::unique_ptr` 可以被设置成使用自定义析构器（custom deleter）：析构资源时所调用的任意函数（或函数对象，包括那些由 lambda 表达式产生的）。若析构器是函数指针，那么 `std::unique_ptr` 的尺寸一般会增加一到两个字长（word），若析构器是函数对象，则带来的尺寸变化取决于该函数对象中存储了多少状态。无状态的函数对象（例如，无捕获的 lambda 表达式）不会浪费任何存储尺寸。所以，当这几种析构器都可用时，lambda 表达式是更好的选择。  
+&emsp;&emsp;`std::unique_ptr` 以两种形式提供，一种是单个对象（`std::unique_ptr<T>`），另一种是数组（`std::unique_ptr<T[]>`）。`std::unique_ptr` 的 API 也被设计成与使用形式相匹配。单个对象形式不提供索引运算符（`operator []`），而数组形式则不提供提领运算符（`operator*` 和 `operator->`）。作者说他唯一能想到 `std::unique_ptr<T[]>` 的合理使用场景是使用了一个 C 风格的 API，它返回了堆上的裸指针，且指定了其指渉对象的所有权。  
+&emsp;&emsp;工厂函数是 `std::unique_ptr` 的常用惯例。`std::unique_ptr` 可以方便高效地转换成 `std::shared_ptr`。工厂函数并不知道调用者是对其返回的对象采用专属所有权语义好，还是共享所有权更合适，`std::unique_ptr` 作为工厂函数的返回型别就向调用者提供了最高效的智能指针，且它也不会阻止调用者把返回值转换成更具弹性的其他兄弟型别的智能指针。  
+
+```c++
+class Investment{
+public:
+    ...
+    virtual ~Investment();      // 必备的设计组件！
+    ...
+};
+class Stock : public Investment { ... };
+class Bond : public Investment { ... };
+class RealEstate : public Investment { ... };       // 继承谱系
+
+template<typename... Ts>
+auto makeInvestment(Ts&&... params)                 // 工厂函数
+{
+    auto delInvmt = [](Investment* pInvestment)     // 一个作为自定义析构器的
+                    {                               // lambda 表达式
+                        makeLogEntry(pInvestment);
+                        delete pInvestment;
+                    };
+    std::unique_ptr<Investment, decltype(delInvmt)>
+        pInv(nullptr, delInvmt);                    // 待返回的指针
+    
+    if(...)
+    {
+        pInv.reset(new Stock(std::forward<Ts>(params)...));
+    }
+    else if(...)
+    {
+        pInv.reset(new Bond(std::forward<Ts>(params)...));
+    }
+    else if(...)
+    {
+        pInv.reset(new RealEstate(std::forward<Ts>(params)...));
+    }
+    return pInv;
+}
+
+std::shared_ptr<Investment> sp =    // 将 std::unique_ptr 型别的对象
+    makeInvestment( arguments );    // 转换为 std::shared_ptr 型别
+```
+
+### Item 19: Use std::shared_ptr for shared-ownership resource management
+
+&emsp;&emsp;std::shared_ptr 提供方便的手段，实现了任意资源在共享所有权语义下进行生命周期管理的垃圾回收。所有指渉到对象的 std::shared_ptr 共同协作，确保在不再需要该对象的时刻将其析构。正如垃圾回收一样，用户无需操心如何管理被指涉到对象的生存期，但又如析构函数一样，该对象的析构函数的时序是确定的。std::shared_ptr 通过访问某资源的引用计数来确定自己是否是最后一个指渉到该资源的。引用计数是个与资源相关联的值，用来记录跟踪指渉到该资源的 std::shared_ptr 数量。引用计数的存在带来的一些性能影响：
+
++ std::shared_ptr 的尺寸是裸指针的两倍。
++ 引用计数的内存必须动态分配。
++ 引用计数的递增和递减必须是原子操作，因为在不同的线程中可能存在并发的读写器。原子操作都比非原子操作慢。
+
+&emsp;&emsp;std::shared_ptr 可以移动，移动操作会将源 std::shared_ptr 置空，一旦新的 std::shared_ptr 产生后，原有的 std::shared_ptr 将不再指渉到其资源，结果是不需要进行任何引用计数操作。因此，移动 std::shared_ptr 比复制它们要快：复制要求递增引用计数，而移动不需要。这一点对于构造和赋值操作同样成立。  
+&emsp;&emsp;std::shared_ptr 的自定义析构器设计比 std::unique_ptr 更具弹性：两个各有不同型别的自定义析构器的 `std::shared_ptr<Widget>` 由于本身具有具有同一型别，因此它们可以被放置在元素型别为该对象型别的容器中，也可以互相赋值，并且都可以被传递至要求 `std::shared_ptr<Widget>` 型别形参的函数。然而对于具有不同自定义析构型别的 std::unique_ptr 来说，以上这些均无法实现，因为自定义析构器的型别会影响 std::unique_ptr 的型别（前者是后者的一部分）。  
+
+```c++
+    std::unique_ptr<Widget, decktype(loggingDel)>> // 析构器型别是
+            upw(new Widget, loggingDel);           // 智能指针型别的一部分
+
+    std::shared_ptr<Widget>                         // 析构器型别不是
+            spw(new Widget, loggingDel);            // 智能指针型别的一部分
+```
+
+&emsp;&emsp;与 std::unique_ptr 的另一点不同，是自定义析构器不会改变 std::shared_ptr 的尺寸。自定义析构器可以是函数对象，而函数对象可以包含任意数量的数据（意味着它们的尺寸可能是任意大小），但是该部分内存不属于 std::shared_ptr 对象的一部分，它位于堆上，又或是 std::shared_ptr 的创建者利用了 std::shared_ptr 对自定义内存分配器的支持的话，则它会在托管给该分配器的内存位置。准确地说，每一个由 std::shared_ptr 管理的对象都有一个控制块。除了引用计数，该控制块还包含了自定义析构器和自定义内存分配器的一份复制（如果指定了的话），控制块还有可能包含其他附加数据：
+
+![shared_ptr-mem](/assets/img/2021-7-25-Effective-Modern-Cpp/shared_ptr-mem.png)
+
+&emsp;&emsp;一个对象的控制块由创建首个指渉到该对象的 std::shared_ptr 的函数来确定。正在创建指渉到某对象的 std::shared_ptr 的函数是无从得知是否有其他的 std::shared_ptr 已经指渉到该对象的。因此，控制块的创建遵循了以下规则：
+
++ std::make_shared 总是创建一个控制块。
++ 从具备专属所有权的指针出发构造一个 std::shared_ptr 时，会创建一个控制块。
++ 当 std::shared_ptr 构造函数使用裸指针作为实参来调用时，它会创建一个控制块。这样的话：从一个裸指针出发来构造不止一个 std::shared_ptr 的话，兼职如同免费搭乘了粒子加速器像未定义行为直奔而去。因此，尽可能避免将裸指针传递给一个 std::shared_ptr 的构造函数（使用 std::make_shared），如果必须将一个裸指针传递给 std::shared_ptr 的构造函数，就直接传递 `new` 运算符的结果，而非传递一个裸指针变量。使用裸指针变量作为 std::shared_ptr 构造函数实参时，会有一种令人吃惊的方式导致涉及 `this` 指针的多重控制块。书上讲述了针对类似这种情况，std::shared_ptr 的 API 提供一种基础设施。  
+
+&emsp;&emsp;通常的控制块要更加复杂，使用了继承，甚至会用到虚函数（用以确保所指渉到的对象被适当地析构）。  
+&emsp;&emsp;一旦你将资源的生存期托管给了 std::shared_ptr ，就不能再更改注意了。即使引用计数为一，也不能回收该资源的所有权，并让一个 std::unique_ptr 来管理它。和 std::unique_ptr 的另一个不同是，std::shared_ptr 的 API 仅被设计用来处理指渉到单个对象的指针。并没有所谓的 `std::shared_ptr<T[]>`。另一方面，std::shared_ptr 支持从派生类到基类的指针型别转换，`std::unique_ptr<T>` 也支持，但 `std::unique_ptr<T[]>` 禁止此型别转换。  
