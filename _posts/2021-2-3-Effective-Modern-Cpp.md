@@ -635,7 +635,7 @@ void Widget::addFilter() const
     std::vector<double> data;       // 欲移入闭包的对象
     ...
     auto func1 = [data = std::move(data)]        // C++14 的初始化捕获
-                {/* 对数据加以运用 */ }；
+                {/* 对数据加以运用 */ };
 
     auto func2 = std::bind(                      // C++11 中
         [](std::vector<double>& data) mutable   //模拟初始化捕获的部分
@@ -659,4 +659,30 @@ void Widget::addFilter() const
             );
 ```
 
-&emsp;&emsp;默认情况下，lambda 生成的闭包类中的 `operator()` 成员函数会带有 const 饰词，闭包里的所有成员变量在 lambda 式的函数体内都会带有 const 饰词。但是，绑定对象里移动构造得到的 `data` 副本却并不带有 const 饰词。为防止副本在 lambda 式内被意外修改，lambda 的形参就声明为常量引用（上面第二个例子）。lambda 式声明带有 multable 饰词时，闭包里的 `operator()` 函数就不会在声明时带有 const 饰词（上面第一个例子）。  
+&emsp;&emsp;默认情况下，lambda 生成的闭包类中的 `operator()` 成员函数会带有 const 饰词，闭包里的所有成员变量在 lambda 式的函数体内都会带有 const 饰词。但是，绑定对象里移动构造得到的 `data` 副本却并不带有 const 饰词。为防止副本在 lambda 式内被意外修改，lambda 的形参就声明为常量引用（上面第二个例子）。lambda 式声明带有 multable 饰词时，闭包里的 `operator()` 函数就不会在声明时带有 const 饰词（上面第一个例子）。 
+
+### Item 33: Use decltype on auto&& parameters to std::forward them
+
+&emsp;&emsp;C++14 的泛型 lambda 式（generic lambda）：lambda 可以在形参规格中使用 `auto`，同时能够接受可变长形参。这个特性的实现：闭包类中的 `operator()` 采用模板实现。  
+&emsp;&emsp;若 lambda 式的形参是个 `auto&&` 型别，在 lambda 内部需完美转发，但是 `std::forward<T>` 需要接受一个形参型别 `T` 。在泛型 lambda 式中，却没有可用的形参型别 `T`。`decltype` 提供了一种实现途径。先来熟悉下一些概念，左值传递给万能引用的形参，该形参型别会成为左值引用，传递右值，该形参会成为右值引用。因此，可以通过探查形参的型别，来判断传入的实参是左值还是右值。如果传入的是个左值，`decltype(x)` 将会产生左值引用型别，如果传入的是个右值，`decltype(x)` 将会产生右值引用型别。而 `std::forward` 的惯例是：用型别形参为左值引用表明想要返回左值，而用非引用型别时来表示想要返回的右值。对于 lambda 式，`auto&&` 型别的形参 `x` 绑定了左值，则 `decltype(x)` 将产生左值引用型别，转发也将返回左值，这没问题。不过，若 `auto&&` 型别的形参 `x` 绑定了右值，`decltype(x)` 将会产生右值引用，而非符合惯例的非引用型别。但是，实例化 `std::forward` 时，使用一个右值引用型别和使用一个非引用型别，会产生相同结果。所以，无论左值还是右值，把 `decltype(x)` 传递给 `std::forward` 都能给出想要的结果：
+
+```c++
+auto f = 
+    [] (auto&& param)
+    {
+        return 
+        func(normalize(std::forward<decltype(param)>(param)));
+    };
+
+auto f = 
+    [](auto&&... params)    // 可变长形参
+    {
+        return
+        func(normalize(std::forward<decltype(params)>(params)...))
+    };
+```
+
+### Item 34： Prefer lambdas to std::bind
+
+&emsp;&emsp;lambda 式比起使用 std::bind 而言，可读性更好、表达力更强，可能运行效率更高。在 C++11 中，std::bind 在实现移动捕获，或是绑定到具备模板化的函数调用运算符的对象这两个场合，尚有余热发挥。但在 C++14 的 lambda 逐渐完善之后，std::bind 已经彻底失去了用武之地。  
+
